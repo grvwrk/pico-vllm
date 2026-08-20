@@ -4,6 +4,9 @@ class BlockManager:
         self.allocated_blocks = {} # seq_id -> list of block indices
 
     def allocate_block(self, seq_id):
+        """
+        Allocate a free block for the given sequence ID.
+        """
         if not self.free_block_pool:
             raise RuntimeError("No free blocks available for allocation.")
         if seq_id not in self.allocated_blocks:
@@ -13,6 +16,9 @@ class BlockManager:
         return block_index
 
     def free_blocks(self, seq_id):
+        """
+        Deallocate the blocks associated with the given sequence ID and return them to the free pool.
+        """
         if seq_id not in self.allocated_blocks:
             raise RuntimeError(f"No blocks allocated for seq_id {seq_id}.")
         for block_index in self.allocated_blocks[seq_id]:
