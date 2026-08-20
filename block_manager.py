@@ -1,9 +1,3 @@
-
-total_capacity_in_tokens = 32000  # example: total tokens worth of KV-cache space
-num_tokens_per_block = 16
-num_block = total_capacity_in_tokens // num_tokens_per_block
-
-
 class BlockManager:
     def __init__(self, num_block):
         self.free_block_pool = set(range(num_block))
@@ -24,3 +18,4 @@ class BlockManager:
         for block_index in self.allocated_blocks[seq_id]:
             self.free_block_pool.add(block_index)
         del self.allocated_blocks[seq_id]
+
