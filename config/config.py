@@ -20,7 +20,7 @@ class Config:
         return self.embed_dim // self.num_heads
 
 
-with open("config.yaml", "r") as f:
+with open("C:\\research-eng\\pico-vllm\\pico-vllm\\config\\config.yaml", "r") as f:
     data = yaml.safe_load(f)
 
 config = Config(**data)
