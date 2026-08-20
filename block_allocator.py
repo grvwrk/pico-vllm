@@ -14,3 +14,10 @@ def allocate_block(seq_id):
     block_index = free_block_pool.pop()
     allocated_blocks[seq_id].append(block_index)
     return block_index
+
+def free_blocks(seq_id):
+    if seq_id not in allocated_blocks:
+        raise RuntimeError(f"No blocks allocated for seq_id {seq_id}.")
+    for block_index in allocated_blocks[seq_id]:
+        free_block_pool.add(block_index)
+    del allocated_blocks[seq_id]
