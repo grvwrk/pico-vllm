@@ -4,7 +4,7 @@ from config import config
 key_cache = torch.zeros(
     config.num_layers,
     config.num_block,
-    config.num_heads,
+    config.num_kv_heads,
     config.num_tokens_per_block, 
     config.head_dim
 )

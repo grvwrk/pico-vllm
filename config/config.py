@@ -9,6 +9,7 @@ class Config:
     num_layers: int
     num_heads: int
     embed_dim: int
+    num_kv_heads: int
 
     @property
     def num_blocks(self):
