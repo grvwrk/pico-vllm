@@ -4,15 +4,16 @@ from config import config
 
 class KVCache:
     def __init__(self):
-        self.key_cache = torch.zeros(
-            config.num_layers,
-            config.num_blocks,
-            config.num_kv_heads,
-            config.num_tokens_per_block,
-            config.head_dim,
-            dtype=torch.bfloat16
-        )
-        self.value_cache = torch.zeros_like(self.key_cache)
+            self.key_cache = torch.zeros(
+                config.num_layers,
+                config.num_blocks,
+                config.num_kv_heads,
+                config.num_tokens_per_block,
+                config.head_dim,
+                dtype=torch.bfloat16
+            )
+            self.value_cache = torch.zeros_like(self.key_cache)
+            self.block_size = config.num_tokens_per_block
 
     def write(self, layer, block_index, slot_in_block, key_vector, value_vector):
         """
