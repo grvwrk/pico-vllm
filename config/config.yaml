@@ -1,6 +1,6 @@
 total_capacity_in_tokens: 32000
 num_tokens_per_block: 16
-num_layers: 4
-num_heads: 2
-embed_dim: 120
-num_kv_heads : 2
+num_layers: 24
+num_heads: 14
+embed_dim: 896
+num_kv_heads: 2
