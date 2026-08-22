@@ -17,7 +17,7 @@ from `config/__init__.py`.
 Also caught a subtler bug after that: my `config.yaml` still had leftover
 placeholder values (`num_heads: 2`, `embed_dim: 120`, `num_layers: 4`) from
 before I'd actually inspected the real model architecture. Since my whole
-point was verifying against the real Qwen2.5-0.5B model, I updated these to
+point was verifying against the real Qwen2.5-0.5B-Instruct model, I updated these to
 the real values I'd already worked out — 24 layers, 14 query heads, 896
 embedding dimension, 2 KV heads (GQA) — which fixed a `head_dim` mismatch
 (was computing 60 instead of the correct 64).
