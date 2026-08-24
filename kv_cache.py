@@ -10,7 +10,7 @@ class KVCache:
                 config.num_kv_heads,
                 config.num_tokens_per_block,
                 config.head_dim,
-                dtype=torch.bfloat16
+                
             )
             self.value_cache = torch.zeros_like(self.key_cache)
             self.block_size = config.num_tokens_per_block
