@@ -1,12 +1,6 @@
 import torch
-
-from pico_vllm.config import config
 from pico_vllm.core.kv_cache import KVCache
 from pico_vllm.core.sequence import Sequence
-
-num_query_heads = config.num_heads
-num_kv_heads = config.num_kv_heads
-
 
 def gather_kv(kv_cache: KVCache, layer, seq: Sequence):
     """
@@ -53,7 +47,7 @@ def paged_attention(query, kv_cache: KVCache, layer, seq: Sequence, is_prefill: 
     """
     gathered_keys, gathered_values = gather_kv(kv_cache, layer, seq)
 
-    group_size = num_query_heads // num_kv_heads
+    group_size = kv_cache.architecture.num_heads // kv_cache.architecture.num_kv_heads
     keys_expanded = gathered_keys.repeat_interleave(group_size, dim=0)
     values_expanded = gathered_values.repeat_interleave(group_size, dim=0)
 

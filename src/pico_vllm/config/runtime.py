@@ -9,8 +9,6 @@ from dataclasses import dataclass
 import torch
 
 
-SUPPORTED_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
-
 
 def _env_int(name: str, default: int) -> int:
     value = os.getenv(name)
@@ -19,7 +17,7 @@ def _env_int(name: str, default: int) -> int:
 
 @dataclass(frozen=True)
 class RuntimeSettings:
-    model_id: str = SUPPORTED_MODEL_ID
+    model_id: str = "Qwen/Qwen2.5-0.5B-Instruct"
     device: str = "auto"
     dtype: str = "float32"
     kv_cache_blocks: int = 64
@@ -59,12 +57,6 @@ class RuntimeSettings:
         return settings
 
     def validate(self) -> None:
-        if self.model_id != SUPPORTED_MODEL_ID:
-            raise ValueError(
-                f"Unsupported model {self.model_id!r}. pico-vLLM currently supports "
-                f"only {SUPPORTED_MODEL_ID!r}, because its forward pass is written "
-                "for that architecture."
-            )
         if self.kv_cache_blocks < 1 or self.kv_cache_block_size < 1:
             raise ValueError("KV-cache block count and block size must both be positive.")
         if self.max_batched_tokens < 1:

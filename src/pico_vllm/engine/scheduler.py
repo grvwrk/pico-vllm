@@ -15,7 +15,8 @@ import torch
 from pico_vllm.core.block_manager import BlockManager
 from pico_vllm.core.kv_cache import KVCache
 from pico_vllm.core.sequence import Sequence
-from pico_vllm.engine.model_wrapper import forward_one_sequence
+from pico_vllm.models.base import ModelRunner
+from pico_vllm.models.qwen2 import Qwen2Runner
 
 
 # ---- Sequence states ----
@@ -44,15 +45,26 @@ class ManagedSequence:
 
 class Scheduler:
     def __init__(
-        self, model, tokenizer, block_manager: BlockManager, kv_cache: KVCache,
+        self, model_or_runner, tokenizer=None, block_manager: BlockManager | None = None,
+        kv_cache: KVCache | None = None,
         *, max_batched_tokens: int | None = None,
     ):
-        self.model = model
-        self.tokenizer = tokenizer
+        if isinstance(model_or_runner, ModelRunner):
+            self.runner = model_or_runner
+            self.model = self.runner.model
+            self.tokenizer = self.runner.tokenizer
+        else:
+            # Compatibility path for benchmarks that still pass a raw Qwen2
+            # Hugging Face model. Production code passes a registered runner.
+            self.runner = Qwen2Runner("Qwen/Qwen2.5-0.5B-Instruct", model_or_runner, tokenizer)
+            self.model = model_or_runner
+            self.tokenizer = tokenizer
+        if block_manager is None or kv_cache is None:
+            raise ValueError("Scheduler requires a block manager and KV cache.")
         self.bm = block_manager
         self.kv_cache = kv_cache
         self.max_batched_tokens = max_batched_tokens
-        self.device = next(model.parameters()).device
+        self.device = self.runner.device
 
         self.waiting_queue = []   # list of ManagedSequence, not yet admitted
         self.running = {}         # seq_id -> ManagedSequence, currently active
@@ -98,8 +110,8 @@ class Scheduler:
         with torch.no_grad():
             if not managed.has_been_prefilled:
                 # First time this sequence runs: process the whole prompt at once
-                logits = forward_one_sequence(
-                    self.model, self.kv_cache, self.bm, managed.seq,
+                logits = self.runner.forward_one_sequence(
+                    self.kv_cache, self.bm, managed.seq,
                     input_ids=managed.prompt_ids, is_prefill=True,
                 )
                 managed.has_been_prefilled = True
@@ -108,8 +120,8 @@ class Scheduler:
                 # last generated token as input
                 last_token = managed.generated_ids[-1]
                 next_input = torch.tensor([last_token], device=self.device)
-                logits = forward_one_sequence(
-                    self.model, self.kv_cache, self.bm, managed.seq,
+                logits = self.runner.forward_one_sequence(
+                    self.kv_cache, self.bm, managed.seq,
                     input_ids=next_input, is_prefill=False,
                 )
 

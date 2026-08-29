@@ -10,12 +10,11 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
 from pico_vllm.config import RuntimeSettings
 from pico_vllm.core.block_manager import BlockManager
 from pico_vllm.core.kv_cache import KVCache
 from pico_vllm.engine.scheduler import Scheduler
+from pico_vllm.models.registry import ModelRegistry
 from pico_vllm.server.scheduler_service import GenerationStream, SchedulerService
 
 @asynccontextmanager
@@ -24,10 +23,8 @@ async def lifespan(app: FastAPI):
     settings.validate()
     device = settings.resolved_device()
     dtype = settings.torch_dtype()
-    tokenizer = AutoTokenizer.from_pretrained(settings.model_id)
-    model = AutoModelForCausalLM.from_pretrained(settings.model_id, torch_dtype=dtype)
-    model.to(device)
-    model.eval()
+    runner = ModelRegistry.create(settings.model_id, device=device, dtype=dtype)
+    tokenizer = runner.tokenizer
 
     block_manager = BlockManager(num_block=settings.kv_cache_blocks)
     kv_cache = KVCache(
@@ -35,9 +32,10 @@ async def lifespan(app: FastAPI):
         block_size=settings.kv_cache_block_size,
         device=device,
         dtype=dtype,
+        architecture=runner.architecture,
     )
     service = SchedulerService(Scheduler(
-        model, tokenizer, block_manager, kv_cache,
+        runner, block_manager=block_manager, kv_cache=kv_cache,
         max_batched_tokens=settings.max_batched_tokens,
     ))
     await service.start()

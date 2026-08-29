@@ -3,6 +3,7 @@ import json
 import pytest
 
 from pico_vllm.config import RuntimeSettings
+from pico_vllm.models.registry import ModelRegistry
 from pico_vllm.server.api import ChatMessage, _chat_prompt, _openai_sse
 
 
@@ -27,8 +28,10 @@ def test_runtime_settings_accept_cli_overrides():
 
 
 def test_runtime_settings_rejects_unsupported_model():
-    with pytest.raises(ValueError, match="currently supports only"):
-        RuntimeSettings(model_id="meta-llama/Llama-3.2-1B-Instruct").validate()
+    with pytest.raises(ValueError, match="Currently supported"):
+        ModelRegistry.create(
+            "meta-llama/Llama-3.2-1B-Instruct", device="cpu", dtype=None
+        )
 
 
 def test_openai_helpers_use_chat_template_and_valid_sse():

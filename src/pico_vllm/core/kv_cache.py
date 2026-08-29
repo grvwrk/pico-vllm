@@ -1,17 +1,27 @@
 import torch
 from pico_vllm.config import config
+from pico_vllm.models.base import ModelArchitecture
 
 
 class KVCache:
-    def __init__(self, *, num_blocks=None, block_size=None, device=None, dtype=None):
+    def __init__(
+        self, *, architecture: ModelArchitecture | None = None, num_blocks=None,
+        block_size=None, device=None, dtype=None,
+    ):
+            self.architecture = architecture or ModelArchitecture(
+                num_layers=config.num_layers,
+                num_heads=config.num_heads,
+                hidden_size=config.embed_dim,
+                num_kv_heads=config.num_kv_heads,
+            )
             num_blocks = config.num_blocks if num_blocks is None else num_blocks
             block_size = config.num_tokens_per_block if block_size is None else block_size
             self.key_cache = torch.zeros(
-                config.num_layers,
+                self.architecture.num_layers,
                 num_blocks,
-                config.num_kv_heads,
+                self.architecture.num_kv_heads,
                 block_size,
-                config.head_dim,
+                self.architecture.head_dim,
                 device=device,
                 dtype=dtype,
             )
