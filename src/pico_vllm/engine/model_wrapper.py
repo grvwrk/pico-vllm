@@ -12,9 +12,9 @@ def apply_rope(x, model, seq_len, position_ids=None):
     x: (num_heads, seq_len, head_dim)
     """
     if position_ids is None:
-        position_ids = torch.arange(seq_len).unsqueeze(0)  # (1, seq_len)
+        position_ids = torch.arange(seq_len, device=x.device).unsqueeze(0)  # (1, seq_len)
 
-    dummy_hidden = torch.zeros(1, seq_len, model.config.hidden_size, dtype=x.dtype)
+    dummy_hidden = torch.zeros(1, seq_len, model.config.hidden_size, dtype=x.dtype, device=x.device)
     cos, sin = model.model.rotary_emb(dummy_hidden, position_ids)
     # cos, sin: (1, seq_len, head_dim)
 
@@ -46,7 +46,9 @@ def forward_one_sequence(model, kv_cache: KVCache, block_manager, seq: Sequence,
     hidden_states = model.model.embed_tokens(input_ids)  # (seq_len, hidden_size)
     hidden_states = hidden_states.unsqueeze(0)  # (1, seq_len, hidden_size) — HF layernorm/MLP modules expect a batch dim
 
-    position_ids = torch.arange(position_offset, position_offset + seq_len).unsqueeze(0)  # (1, seq_len)
+    position_ids = torch.arange(
+        position_offset, position_offset + seq_len, device=input_ids.device
+    ).unsqueeze(0)  # (1, seq_len)
 
     for layer_idx, layer in enumerate(model.model.layers):
         residual = hidden_states

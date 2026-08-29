@@ -43,11 +43,16 @@ class ManagedSequence:
 
 
 class Scheduler:
-    def __init__(self, model, tokenizer, block_manager: BlockManager, kv_cache: KVCache):
+    def __init__(
+        self, model, tokenizer, block_manager: BlockManager, kv_cache: KVCache,
+        *, max_batched_tokens: int | None = None,
+    ):
         self.model = model
         self.tokenizer = tokenizer
         self.bm = block_manager
         self.kv_cache = kv_cache
+        self.max_batched_tokens = max_batched_tokens
+        self.device = next(model.parameters()).device
 
         self.waiting_queue = []   # list of ManagedSequence, not yet admitted
         self.running = {}         # seq_id -> ManagedSequence, currently active
@@ -57,7 +62,7 @@ class Scheduler:
         """Add a new request to the waiting queue. Doesn't allocate anything yet —
         admission (and block allocation) only happens once there's room."""
         inputs = self.tokenizer(prompt, return_tensors="pt")
-        prompt_ids = inputs["input_ids"][0]
+        prompt_ids = inputs["input_ids"][0].to(self.device)
         managed = ManagedSequence(seq_id, prompt_ids, max_new_tokens)
         self.waiting_queue.append(managed)
 
@@ -102,7 +107,7 @@ class Scheduler:
                 # Every call after: decode exactly one new token, using the
                 # last generated token as input
                 last_token = managed.generated_ids[-1]
-                next_input = torch.tensor([last_token])
+                next_input = torch.tensor([last_token], device=self.device)
                 logits = forward_one_sequence(
                     self.model, self.kv_cache, self.bm, managed.seq,
                     input_ids=next_input, is_prefill=False,
@@ -120,6 +125,35 @@ class Scheduler:
         if hit_eos or hit_max_len:
             self._evict(managed)
 
+    def step(self) -> bool:
+        """Advance the scheduler by one iteration.
+
+        This is the unit of work used by both the synchronous benchmark
+        runner and the long-lived HTTP scheduler. It admits newly queued
+        requests before stepping every active request once.
+
+        Returns ``True`` when work remains after this iteration. A caller
+        with a background loop can use this to avoid a busy loop while idle.
+        """
+        self._try_admit()
+
+        if not self.running:
+            return bool(self.waiting_queue)
+
+        # Work from a snapshot because a completed sequence removes itself
+        # from ``running`` during _step_sequence().
+        tokens_processed = 0
+        for _, managed in list(self.running.items()):
+            token_cost = len(managed.prompt_ids) if not managed.has_been_prefilled else 1
+            if tokens_processed and self.max_batched_tokens is not None and (
+                tokens_processed + token_cost > self.max_batched_tokens
+            ):
+                break
+            self._step_sequence(managed)
+            tokens_processed += token_cost
+
+        return bool(self.running or self.waiting_queue)
+
     def run(self, max_steps=1000):
         """
         Main iteration loop. Each iteration:
@@ -134,16 +168,8 @@ class Scheduler:
         start on step 6, rather than everyone waiting for the slowest
         sequence in an original fixed batch to finish.
         """
-        for step in range(max_steps):
-            self._try_admit()
-
-            if not self.running and not self.waiting_queue:
-                break  # everything's done, nothing left to admit
-
-            # Step every currently running sequence once. Iterate over a
-            # snapshot of the dict's items, since _step_sequence() may
-            # mutate self.running (via _evict) during the loop.
-            for seq_id, managed in list(self.running.items()):
-                self._step_sequence(managed)
+        for _ in range(max_steps):
+            if not self.step():
+                break
 
         return self.finished

@@ -3,17 +3,20 @@ from pico_vllm.config import config
 
 
 class KVCache:
-    def __init__(self):
+    def __init__(self, *, num_blocks=None, block_size=None, device=None, dtype=None):
+            num_blocks = config.num_blocks if num_blocks is None else num_blocks
+            block_size = config.num_tokens_per_block if block_size is None else block_size
             self.key_cache = torch.zeros(
                 config.num_layers,
-                config.num_blocks,
+                num_blocks,
                 config.num_kv_heads,
-                config.num_tokens_per_block,
+                block_size,
                 config.head_dim,
-                
+                device=device,
+                dtype=dtype,
             )
             self.value_cache = torch.zeros_like(self.key_cache)
-            self.block_size = config.num_tokens_per_block
+            self.block_size = block_size
 
     def write(self, layer, block_index, slot_in_block, key_vector, value_vector):
         """

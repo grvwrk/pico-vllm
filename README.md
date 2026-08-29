@@ -55,12 +55,40 @@ Start the local server:
 uv run pico-vllm
 ```
 
+### Runtime configuration
+
+Every server setting can be supplied as either an environment variable or a CLI option:
+
+| Environment variable | CLI option | Default | Purpose |
+| --- | --- | --- | --- |
+| `PICO_VLLM_MODEL_ID` | `--model-id` | `Qwen/Qwen2.5-0.5B-Instruct` | Supported Hugging Face model ID |
+| `PICO_VLLM_DEVICE` | `--device` | `auto` | `auto`, `cpu`, or `cuda` |
+| `PICO_VLLM_DTYPE` | `--dtype` | `float32` | `float32`, `float16`, or `bfloat16` |
+| `PICO_VLLM_KV_CACHE_BLOCKS` | `--kv-cache-blocks` | `64` | Number of physical KV-cache blocks |
+| `PICO_VLLM_KV_CACHE_BLOCK_SIZE` | `--kv-cache-block-size` | `16` | Tokens stored in each KV-cache block |
+| `PICO_VLLM_MAX_BATCHED_TOKENS` | `--max-batched-tokens` | `512` | Per-iteration scheduler token-work budget |
+| `PICO_VLLM_HOST` | `--host` | `127.0.0.1` | Server bind host |
+| `PICO_VLLM_PORT` | `--port` | `8000` | Server port |
+
+For example, start a CUDA bfloat16 server with a larger cache:
+
+```bash
+uv run pico-vllm --device cuda --dtype bfloat16 --kv-cache-blocks 256 --port 8080
+```
+
+> **Model support:** the explicit model forward pass currently supports only
+> `Qwen/Qwen2.5-0.5B-Instruct`. Supplying another model ID fails at startup
+> with a clear error, rather than loading incompatible weights.
+
 It listens on `http://127.0.0.1:8000`. In another terminal, check its health and submit a request:
 
 ```bash
 curl http://127.0.0.1:8000/health
 
 curl.exe -X POST http://127.0.0.1:8000/generate -H "Content-Type: application/json" -d "{\"prompt\": \"The capital of France is\", \"max_new_tokens\": 20}"
+
+# Stream token events until generation is complete
+curl.exe -N -X POST http://127.0.0.1:8000/generate/stream -H "Content-Type: application/json" -d "{\"prompt\": \"The capital of France is\", \"max_new_tokens\": 20}"
 ```
 
 The API has two routes:
@@ -69,8 +97,31 @@ The API has two routes:
 | --- | --- |
 | `GET /health` | Returns `{"status": "ok"}` when the server is running. |
 | `POST /generate` | Accepts `prompt` and optional `max_new_tokens` (default: 50); returns an ID, generated text, and token count. |
+| `POST /generate/stream` | Accepts the same body and emits SSE `token` events followed by a `done` event. |
+| `GET /v1/models` | Lists the one loaded model in OpenAI-compatible format. |
+| `POST /v1/chat/completions` | Minimal OpenAI-compatible chat endpoint supporting `messages`, `max_tokens`, and `stream`. |
 
-This development server loads the model once, but processes each HTTP request with a fresh scheduler. It demonstrates the engine over HTTP; it does not yet batch simultaneous HTTP requests together.
+The server owns one scheduler, model, block manager, and KV cache for its lifespan. Each request joins the shared waiting queue, and the background loop admits and steps active requests continuously. Use `/generate` for a completed response or `/generate/stream` to receive tokens as they are generated.
+
+### OpenAI-compatible chat
+
+Use the endpoint with any compatible client, or with curl:
+
+```bash
+curl.exe -X POST http://127.0.0.1:8000/v1/chat/completions -H "Content-Type: application/json" -d "{\"messages\":[{\"role\":\"user\",\"content\":\"Explain paged attention briefly.\"}],\"max_tokens\":64}"
+```
+
+Set `"stream": true` to receive standard `data: {chunk}` SSE messages, ending with `data: [DONE]`.
+
+### Streamlit chat UI
+
+With the API server running, open the local chat UI in another terminal:
+
+```bash
+uv run streamlit run src/pico_vllm/ui.py
+```
+
+The UI defaults to `http://127.0.0.1:8000`; change it from the sidebar if the server runs on another host or port.
 
 Every core component — block allocation, the KV-cache, GQA-aware paged
 attention, and the full multi-layer forward pass — is checked directly
