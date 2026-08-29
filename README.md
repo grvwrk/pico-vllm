@@ -5,17 +5,72 @@ KV-cache management and continuous batching, verified against real
 `Qwen2.5-0.5B-Instruct` outputs and benchmarked against a naive static
 batching baseline.
 
-## Run locally
+## Quick start
 
-Install the project with `uv sync`, then run the suite with `uv run python -m pytest -q`.
-The package exposes its implementation under `src/pico_vllm/`:
+Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/), and a PyTorch-compatible CPU or GPU. The first command below also downloads the Qwen model the first time a model-backed test, benchmark, or server request runs.
 
-- `core/` contains block allocation, KV-cache, sequence, and paged-attention primitives.
-- `engine/` contains model execution and the continuous/naive schedulers.
-- `server/` contains the FastAPI app; start it with `uv run pico-vllm`.
-- `scripts/` contains the reproducible benchmark entry points.
+```bash
+uv sync
+uv run python -m pytest -q
+```
 
-Project notes live in `docs/`.
+## Project structure
+
+```text
+pico-vllm/
+├── src/pico_vllm/
+│   ├── config/             # Model/cache configuration and packaged YAML defaults
+│   ├── core/               # Block manager, KV cache, sequences, paged attention
+│   ├── engine/             # Model forward pass, continuous scheduler, naive baseline
+│   └── server/             # FastAPI application
+├── scripts/                # Reproducible benchmark programs
+├── tests/                  # Component and integration correctness tests
+├── docs/                   # Build notes and progress log
+├── progress/               # Daily implementation notes
+├── README.md
+└── pyproject.toml          # Dependencies and the `pico-vllm` server command
+```
+
+All project code is imported through `pico_vllm.*`; runnable programs live in `scripts/`, keeping the repository root reserved for metadata and documentation.
+
+## Reproduce the benchmarks
+
+From the repository root, run:
+
+```bash
+# Naive static batching versus continuous batching
+uv run python scripts/run_naive_vs_continuous.py
+
+# Admission behavior while the KV-block pool is constrained
+uv run python scripts/run_admission_under_pressure.py
+```
+
+The first benchmark prints elapsed time, real generated-token count, wasted forward-pass steps, and throughput. The second prints the request-admission timeline. Results vary with CPU/GPU, PyTorch version, model-download state, and dtype; reproduce the *comparison* rather than expecting the exact wall-clock numbers in this README.
+
+## Run the API server
+
+Start the local server:
+
+```bash
+uv run pico-vllm
+```
+
+It listens on `http://127.0.0.1:8000`. In another terminal, check its health and submit a request:
+
+```bash
+curl http://127.0.0.1:8000/health
+
+curl.exe -X POST http://127.0.0.1:8000/generate -H "Content-Type: application/json" -d "{\"prompt\": \"The capital of France is\", \"max_new_tokens\": 20}"
+```
+
+The API has two routes:
+
+| Route | Purpose |
+| --- | --- |
+| `GET /health` | Returns `{"status": "ok"}` when the server is running. |
+| `POST /generate` | Accepts `prompt` and optional `max_new_tokens` (default: 50); returns an ID, generated text, and token count. |
+
+This development server loads the model once, but processes each HTTP request with a fresh scheduler. It demonstrates the engine over HTTP; it does not yet batch simultaneous HTTP requests together.
 
 Every core component — block allocation, the KV-cache, GQA-aware paged
 attention, and the full multi-layer forward pass — is checked directly
@@ -179,24 +234,3 @@ output, not just assumed correct from the math:
   engineering — noted here rather than left implicit.
 - **Single GPU/CPU, single model.** No tensor parallelism, no
   multi-model serving.
-
----
-
-## Repo layout
-
-```
-pico-vllm/
-├── config/                  # Config dataclass + config.yaml (real Qwen2.5-0.5B-Instruct architecture values)
-├── block_manager.py         # Free-list + per-sequence block table
-├── kv_cache.py               # Real KV-cache tensors, block-indexed read/write
-├── sequence.py                # Per-sequence state: block list, token count, append_token
-├── paged_attention.py        # gather_kv + GQA expansion + scaled_dot_product_attention
-├── model_wrapper.py          # Full 24-layer forward pass using paged_attention
-├── naive_batching.py          # Naive static batching baseline
-├── scheduler.py                # Iteration-level continuous batching (admit/evict)
-├── api.py                      # Minimal FastAPI server
-├── run_naive_vs_continuous.py       # Benchmark 1: eviction efficiency
-├── run_admission_under_pressure.py  # Benchmark 2: admission under memory pressure
-├── tests/                      # pytest suite — correctness checks for every component above
-└── doc/progress.md              # Day-by-day build log
-```
