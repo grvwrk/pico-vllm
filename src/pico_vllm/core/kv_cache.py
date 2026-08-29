@@ -1,5 +1,5 @@
 import torch
-from config import config
+from pico_vllm.config import config
 
 
 class KVCache:

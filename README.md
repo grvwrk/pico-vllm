@@ -5,6 +5,18 @@ KV-cache management and continuous batching, verified against real
 `Qwen2.5-0.5B-Instruct` outputs and benchmarked against a naive static
 batching baseline.
 
+## Run locally
+
+Install the project with `uv sync`, then run the suite with `uv run python -m pytest -q`.
+The package exposes its implementation under `src/pico_vllm/`:
+
+- `core/` contains block allocation, KV-cache, sequence, and paged-attention primitives.
+- `engine/` contains model execution and the continuous/naive schedulers.
+- `server/` contains the FastAPI app; start it with `uv run pico-vllm`.
+- `scripts/` contains the reproducible benchmark entry points.
+
+Project notes live in `docs/`.
+
 Every core component — block allocation, the KV-cache, GQA-aware paged
 attention, and the full multi-layer forward pass — is checked directly
 against Hugging Face's own model outputs (`torch.allclose`), not just

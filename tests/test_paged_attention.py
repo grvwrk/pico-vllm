@@ -1,11 +1,11 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from block_manager import BlockManager
-from kv_cache import KVCache
-from sequence import Sequence
-from paged_attention import paged_attention
-from config import config
+from pico_vllm.config import config
+from pico_vllm.core.block_manager import BlockManager
+from pico_vllm.core.kv_cache import KVCache
+from pico_vllm.core.paged_attention import paged_attention
+from pico_vllm.core.sequence import Sequence
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
 LAYER = 0

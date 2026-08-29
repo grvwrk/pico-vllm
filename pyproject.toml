@@ -1,7 +1,7 @@
 [project]
 name = "pico-vllm"
 version = "0.1.0"
-description = "Add your description here"
+description = "An educational single-GPU inference engine with paged KV caching and continuous batching."
 readme = "README.md"
 authors = [
     { name = "Gourav Sahu", email = "plutoe.info@gmail.com" }
@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
-pico-vllm = "pico_vllm:main"
+pico-vllm = "pico_vllm.server.api:main"
 
 [build-system]
 requires = ["uv_build>=0.12.3,<0.13.0"]

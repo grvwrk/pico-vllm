@@ -1,4 +1,4 @@
-from block_manager import BlockManager
+from pico_vllm.core.block_manager import BlockManager
 
 def test_no_collision_between_sequences():
     bm = BlockManager(num_block=10)

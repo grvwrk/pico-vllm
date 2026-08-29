@@ -1,8 +1,8 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from block_manager import BlockManager
-from kv_cache import KVCache
+from pico_vllm.core.block_manager import BlockManager
+from pico_vllm.core.kv_cache import KVCache
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
 

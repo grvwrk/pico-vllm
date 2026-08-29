@@ -1,8 +1,8 @@
 import torch
 
-from config import config
-from sequence import Sequence
-from kv_cache import KVCache
+from pico_vllm.config import config
+from pico_vllm.core.kv_cache import KVCache
+from pico_vllm.core.sequence import Sequence
 
 num_query_heads = config.num_heads
 num_kv_heads = config.num_kv_heads

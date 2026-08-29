@@ -12,10 +12,10 @@ never sits idle just because one sequence in the batch happens to be done.
 
 import torch
 
-from block_manager import BlockManager
-from kv_cache import KVCache
-from sequence import Sequence
-from model_wrapper import forward_one_sequence
+from pico_vllm.core.block_manager import BlockManager
+from pico_vllm.core.kv_cache import KVCache
+from pico_vllm.core.sequence import Sequence
+from pico_vllm.engine.model_wrapper import forward_one_sequence
 
 
 # ---- Sequence states ----

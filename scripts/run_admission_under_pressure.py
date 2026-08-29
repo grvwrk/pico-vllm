@@ -20,11 +20,11 @@ import time
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from block_manager import BlockManager
-from kv_cache import KVCache
-from sequence import Sequence
-from model_wrapper import forward_one_sequence
-from scheduler import Scheduler, WAITING, RUNNING, FINISHED
+from pico_vllm.core.block_manager import BlockManager
+from pico_vllm.core.kv_cache import KVCache
+from pico_vllm.core.sequence import Sequence
+from pico_vllm.engine.model_wrapper import forward_one_sequence
+from pico_vllm.engine.scheduler import FINISHED, RUNNING, WAITING, Scheduler
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
 

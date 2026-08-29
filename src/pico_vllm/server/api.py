@@ -21,9 +21,9 @@ import uuid
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from block_manager import BlockManager
-from kv_cache import KVCache
-from scheduler import Scheduler
+from pico_vllm.core.block_manager import BlockManager
+from pico_vllm.core.kv_cache import KVCache
+from pico_vllm.engine.scheduler import Scheduler
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
 
@@ -76,3 +76,10 @@ def generate(req: GenerateRequest):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+def main() -> None:
+    """Run the local development server."""
+    import uvicorn
+
+    uvicorn.run("pico_vllm.server.api:app", host="127.0.0.1", port=8000)

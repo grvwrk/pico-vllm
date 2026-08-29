@@ -1,5 +1,5 @@
-from kv_cache import KVCache
-from config import config
+from pico_vllm.config import config
+from pico_vllm.core.kv_cache import KVCache
 
 class Sequence:
     def __init__(self, seq_id, initial_block_index):

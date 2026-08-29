@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from importlib.resources import files
 import yaml
 
 
@@ -20,7 +21,7 @@ class Config:
         return self.embed_dim // self.num_heads
 
 
-with open("C:\\research-eng\\pico-vllm\\pico-vllm\\config\\config.yaml", "r") as f:
+with files(__package__).joinpath("config.yaml").open("r", encoding="utf-8") as f:
     data = yaml.safe_load(f)
 
 config = Config(**data)

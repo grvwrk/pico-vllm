@@ -1,8 +1,8 @@
 import torch
 
-from block_manager import BlockManager
-from kv_cache import KVCache
-from sequence import Sequence
+from pico_vllm.core.block_manager import BlockManager
+from pico_vllm.core.kv_cache import KVCache
+from pico_vllm.core.sequence import Sequence
 
 
 def make_fake_kv(kv_cache):

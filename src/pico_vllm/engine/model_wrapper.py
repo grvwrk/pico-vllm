@@ -1,9 +1,9 @@
 import torch
 
-from config import config
-from kv_cache import KVCache
-from sequence import Sequence
-from paged_attention import paged_attention
+from pico_vllm.config import config
+from pico_vllm.core.kv_cache import KVCache
+from pico_vllm.core.paged_attention import paged_attention
+from pico_vllm.core.sequence import Sequence
 
 
 def apply_rope(x, model, seq_len, position_ids=None):
